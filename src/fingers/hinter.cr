@@ -31,7 +31,8 @@ module Fingers
       alphabet = Fingers.config.alphabet,
       huffman = Huffman.new,
       formatter = ::Fingers::MatchFormatter.new,
-      reuse_hints = false
+      reuse_hints = false,
+      @preserve_layout = false
     )
       @lines = input
       @width = width
@@ -48,10 +49,23 @@ module Fingers
 
     def run
       regenerate_hints!
-      lines[0..-2].each_with_index { |line, index| process_line(line, index, "\n") }
-      process_line(lines[-1], lines.size - 1, "")
-
-      output.flush
+      if @preserve_layout
+        # Do not reflow physical screen rows or scroll after a full bottom row.
+        output.print("\e[?7l")
+        begin
+          lines.each_with_index do |line, index|
+            output.print("\e[#{index + 1};1H")
+            process_line(line, index, "")
+          end
+        ensure
+          output.print("\e[?7h")
+          output.flush
+        end
+      else
+        lines[0..-2].each_with_index { |line, index| process_line(line, index, "\n") }
+        process_line(lines[-1], lines.size - 1, "")
+        output.flush
+      end
     end
 
     def lookup(hint) : Target | Nil
@@ -77,8 +91,14 @@ module Fingers
       :target_by_text
 
     def process_line(line, line_index, ending)
+      if @preserve_layout
+        result = line.gsub(pattern) { |_m, match| replace(match, line_index) }
+        output.print(Fingers::ANSI_RESET + Fingers.config.backdrop_style + result + Fingers::ANSI_RESET + ending)
+        return
+      end
+
       tab_positions = tab_positions_for(line)
-      result = line.gsub(pattern) { |_m| replace($~, line_index) }
+      result = line.gsub(pattern) { |_m, match| replace(match, line_index) }
       initial_length = result.size
       result = expand_tabs(result, tab_positions)
       tab_correction = result.size - initial_length

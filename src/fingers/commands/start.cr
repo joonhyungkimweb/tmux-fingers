@@ -172,14 +172,13 @@ module Fingers::Commands
     end
 
     private def show_hints
-      # It is very important to resize the window at this point to match the
-      # dimensions of the target pane. Otherwise weird linejumping will occur
-      # when we have wrapped lines.
+      # Match both dimensions before drawing, even for short ASCII rows.
+      # Resizing a rendered replica during swap-pane can reflow its grid.
       tmux.resize_window(
         fingers_window.window_id,
         target_pane.pane_width,
         target_pane.pane_height,
-      ) if needs_resize?
+      )
 
       # Swapping panes with -Z flag causes some issues with rendering panes
       # with tabs or double width characters
@@ -233,13 +232,6 @@ module Fingers::Commands
       tmux.select_pane(active_pane.pane_id)
     end
 
-    private def needs_resize?
-      pane_width = target_pane.pane_width.to_i
-      pane_contents.any? do |line|
-        line.bytesize > line.size || line.size > pane_width
-      end
-    end
-
     private def teardown
       tmux.swap_panes(fingers_pane_id, target_pane.pane_id)
       tmux.kill_pane(fingers_pane_id)
@@ -285,11 +277,16 @@ module Fingers::Commands
         state: state,
         output: pane_printer,
         reuse_hints: mode != "jump",
+        preserve_layout: Fingers.config.preserve_layout,
       )
     end
 
     private getter pane_contents : Array(String) do
-      tmux.capture_pane(target_pane, join: mode != "jump").split("\n")
+      tmux.capture_pane(
+        target_pane,
+        join: !Fingers.config.preserve_layout && mode != "jump",
+        preserve_layout: Fingers.config.preserve_layout,
+      ).split("\n")
     end
 
     private getter view : View do
@@ -304,7 +301,7 @@ module Fingers::Commands
     end
 
     private getter tmux : Tmux do
-      Tmux.new("3.3a")
+      Tmux.new(Fingers.config.tmux_version.presence || "3.0")
     end
 
     private def should_notify?

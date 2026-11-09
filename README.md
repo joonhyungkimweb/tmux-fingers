@@ -96,6 +96,7 @@ NOTE: for changes to take effect, you'll need to source again your `.tmux.conf` 
 * [@fingers-enabled-builtin-patterns](#fingers-enabled-builtin-patterns)
 * [@fingers-use-system-clipboard](#fingers-use-system-clipboard)
 * [@fingers-enable-bindings](#fingers-enable-bindings)
+* [@fingers-preserve-layout](#fingers-preserve-layout)
 
 Recipes:
 
@@ -290,6 +291,18 @@ A list of comma separated pattern names. Built-in patterns are the following:
 
 Whether to use the system clipboard when copying matches. If set to `0`,
 tmux-fingers will only copy matches to the tmux buffer.
+
+## @fingers-preserve-layout
+
+`default: 1`
+
+Keep each visible screen row in place when drawing hints. This avoids extra
+wrapping and scrolling in panes with CJK text, tabs, or full-width TUI borders.
+Hint, highlight, selected-item, and backdrop styles work as usual.
+
+Patterns are matched within each visible row. A path or URL wrapped across rows
+is matched by visible fragment rather than as one joined string. Set this to `0`
+to use the previous joined-line rendering.
 
 ## @fingers-enable-bindings
 

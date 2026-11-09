@@ -30,6 +30,46 @@ def generate_lines
 end
 
 describe Fingers::Hinter do
+  it "retains hint and selected-match styles with physical row rendering" do
+    output = TextOutput.new
+    state = ::Fingers::State.new
+    hinter = Fingers::Hinter.new(
+      input: ["prefix: src/main.cr suffix"], width: 80,
+      patterns: ["prefix: (?<match>src/main\\.cr)"],
+      state: state, output: output, alphabet: ["a", "b"],
+      preserve_layout: true,
+    )
+    hinter.run
+    target = ["a", "b"].compact_map { |hint| hinter.lookup(hint) }.first
+    target.text.should eq("src/main.cr")
+    output.contents.should contain(Fingers.config.hint_style + target.hint)
+    output.contents.should contain(Fingers.config.highlight_style + "rc/main.cr")
+
+    state.selected_hints << target.hint
+    output.contents = ""
+    hinter.run
+    output.contents.should contain(Fingers.config.selected_hint_style + target.hint)
+    output.contents.should contain(Fingers.config.selected_highlight_style + "rc/main.cr")
+  end
+
+  it "keeps right-positioned hints inside named captures in layout mode" do
+    original_position = Fingers.config.hint_position
+    Fingers.config.hint_position = "right"
+    output = TextOutput.new
+    hinter = Fingers::Hinter.new(
+      input: ["prefix: src/main.cr suffix"], width: 80,
+      patterns: ["prefix: (?<match>src/main\\.cr)"],
+      state: ::Fingers::State.new, output: output, alphabet: ["a", "b"],
+      preserve_layout: true,
+    )
+    hinter.run
+    target = ["a", "b"].compact_map { |hint| hinter.lookup(hint) }.first
+    output.contents.should contain(Fingers.config.highlight_style + "src/main.c")
+    output.contents.should contain(Fingers.config.hint_style + target.hint)
+  ensure
+    Fingers.config.hint_position = original_position.not_nil!
+  end
+
   it "works in a grid of lines" do
     width = 100
     input = generate_lines
