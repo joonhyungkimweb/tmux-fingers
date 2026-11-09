@@ -1,0 +1,26 @@
+[tools]
+"asdf:mise-plugins/mise-crystal" = "1.22.2"
+
+[env]
+CRYSTAL_CACHE_DIR = "{{config_root}}/.cache/crystal"
+
+[tasks.deps]
+description = "Install the locked Crystal dependencies"
+run = "shards install"
+
+[tasks.build]
+description = "Build the patched tmux-fingers executable"
+depends = ["deps"]
+run = "shards build --release"
+
+[tasks.test]
+description = "Run the Crystal specs with isolated state"
+depends = ["deps"]
+# macOS Unix socket paths are limited to 103 bytes; keep test state short.
+run = """
+set -eu
+fingers_test_state=$(mktemp -d /tmp/fingers-test.XXXXXX)
+trap 'rm -rf "$fingers_test_state"' EXIT
+export XDG_DATA_HOME="$fingers_test_state" XDG_STATE_HOME="$fingers_test_state"
+crystal spec
+"""

@@ -2,10 +2,10 @@
 
 CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if command -v "tmux-fingers" &>/dev/null; then
-  FINGERS_BINARY="tmux-fingers"
-elif [[ -f "$CURRENT_DIR/bin/tmux-fingers" ]]; then
+if [[ -x "$CURRENT_DIR/bin/tmux-fingers" ]]; then
   FINGERS_BINARY="$CURRENT_DIR/bin/tmux-fingers"
+elif command -v "tmux-fingers" &>/dev/null; then
+  FINGERS_BINARY="tmux-fingers"
 fi
 
 if [[ -z "$FINGERS_BINARY" ]]; then
